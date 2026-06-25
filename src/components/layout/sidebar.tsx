@@ -17,6 +17,7 @@ import {
   Target,
   Bell,
   X,
+  QrCode,
 } from "lucide-react"
 import type { UserRole } from "@/lib/models/User"
 import { ROLE_HIERARCHY } from "@/lib/utils"
@@ -56,6 +57,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "Converts", href: "/souls", icon: Users, minRole: "flight_shepherd" },
       { label: "Flight Shepherds", href: "/shepherds", icon: Users, minRole: "branch_coordinator" },
+      { label: "Invite / QR Code", href: "/outreach/invite", icon: QrCode, minRole: "branch_coordinator" },
       { label: "SML Registry", href: "/sml", icon: Award, minRole: "chief_trainer" },
     ],
   },

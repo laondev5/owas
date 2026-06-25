@@ -28,7 +28,9 @@ export default auth((req) => {
   const isPublicPath =
     pathname.startsWith("/login") ||
     pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/api/pusher/auth")
+    pathname.startsWith("/api/pusher/auth") ||
+    pathname.startsWith("/join") ||
+    pathname.startsWith("/api/join")
 
   if (isPublicPath) return NextResponse.next()
 
