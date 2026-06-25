@@ -42,7 +42,7 @@ function getBreadcrumbs(pathname: string): { label: string; href: string }[] {
 }
 
 export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
-  const { data: session } = useSession()
+  useSession()
   const pathname = usePathname()
   const breadcrumbs = getBreadcrumbs(pathname)
 
@@ -78,13 +78,14 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
 
       {/* Right: actions */}
       <div className="flex items-center gap-2 shrink-0">
-        <button
+        <Link
+          href="/notifications"
           className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
           aria-label="Notifications"
         >
           <Bell className="h-5 w-5 text-gray-500" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#E67E22] rounded-full" />
-        </button>
+        </Link>
 
         <div className="w-px h-5 bg-gray-200" />
 

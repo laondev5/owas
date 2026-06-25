@@ -102,6 +102,65 @@ export function convertInactiveHtml(params: {
   `
 }
 
+export function convertAssignedHtml(params: {
+  shepherdName: string
+  convertName: string
+  convertPhone?: string
+  convertAddress?: string
+  locationWon?: string
+  dateWon: string
+  loginUrl: string
+}): string {
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;">
+      <div style="background:#1B4F72;padding:24px;border-radius:8px 8px 0 0;">
+        <h1 style="color:#fff;margin:0;font-size:20px;">HARPAZO-OWAS</h1>
+        <p style="color:#93C6E0;margin:4px 0 0;font-size:13px;">New Convert Assignment</p>
+      </div>
+      <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 8px 8px;">
+        <h2 style="color:#111827;font-size:18px;margin:0 0 8px;">Hi ${params.shepherdName},</h2>
+        <p style="color:#374151;font-size:14px;line-height:1.6;">
+          A new convert has been assigned to you for follow-up. Please make contact within <strong>48 hours</strong>.
+        </p>
+        <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:20px;margin:20px 0;">
+          <h3 style="color:#166534;font-size:15px;margin:0 0 12px;">Convert Details</h3>
+          <table style="width:100%;border-collapse:collapse;">
+            <tr>
+              <td style="color:#6B7280;font-size:13px;padding:5px 0;width:130px;">Name</td>
+              <td style="color:#111827;font-size:13px;font-weight:600;padding:5px 0;">${params.convertName}</td>
+            </tr>
+            ${params.convertPhone ? `<tr>
+              <td style="color:#6B7280;font-size:13px;padding:5px 0;">Phone</td>
+              <td style="color:#111827;font-size:13px;font-weight:600;padding:5px 0;">${params.convertPhone}</td>
+            </tr>` : ""}
+            ${params.convertAddress ? `<tr>
+              <td style="color:#6B7280;font-size:13px;padding:5px 0;">Home Address</td>
+              <td style="color:#111827;font-size:13px;padding:5px 0;">${params.convertAddress}</td>
+            </tr>` : ""}
+            ${params.locationWon ? `<tr>
+              <td style="color:#6B7280;font-size:13px;padding:5px 0;">Where Won</td>
+              <td style="color:#111827;font-size:13px;padding:5px 0;">${params.locationWon}</td>
+            </tr>` : ""}
+            <tr>
+              <td style="color:#6B7280;font-size:13px;padding:5px 0;">Date Won</td>
+              <td style="color:#111827;font-size:13px;padding:5px 0;">${params.dateWon}</td>
+            </tr>
+          </table>
+        </div>
+        <div style="text-align:center;margin:24px 0;">
+          <a href="${params.loginUrl}"
+             style="background:#1B4F72;color:#fff;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block;">
+            View Convert Record
+          </a>
+        </div>
+        <p style="color:#9CA3AF;font-size:12px;border-top:1px solid #F3F4F6;padding-top:16px;margin-top:8px;">
+          Regular follow-up is key to helping this soul integrate into the church. Log every contact in the system.
+        </p>
+      </div>
+    </div>
+  `
+}
+
 export function welcomeUserHtml(params: {
   name: string
   email: string

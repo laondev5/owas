@@ -15,6 +15,7 @@ import {
   Globe,
   ChevronDown,
   Target,
+  Bell,
   X,
 } from "lucide-react"
 import type { UserRole } from "@/lib/models/User"
@@ -37,6 +38,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: "",
     items: [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Notifications", href: "/notifications", icon: Bell },
     ],
   },
   {

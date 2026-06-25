@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { hasMinRole } from "@/lib/utils"
 import type { UserRole } from "@/lib/constants"
 import type { IntegrationStage } from "@/lib/models/Soul"
-import { X, Phone, MapPin, User, Calendar, Tag, MessageSquare, CheckCircle2 } from "lucide-react"
+import { X, Phone, MapPin, User, Calendar, Tag, MessageSquare, CheckCircle2, UserCheck } from "lucide-react"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -60,7 +60,8 @@ const STATUS_COLORS: Record<string, string> = {
   sml_certified: "bg-purple-100 text-purple-700",
 }
 
-function getHighestStage(stage: IntegrationStage): string | null {
+function getHighestStage(stage: IntegrationStage | undefined | null): string | null {
+  if (!stage) return null
   for (const s of STAGES_ORDERED) {
     const key = `${s}Completed` as keyof IntegrationStage
     if (stage[key]) return STAGE_LABELS[s]
@@ -79,17 +80,21 @@ const label = "block text-xs font-semibold uppercase tracking-wide text-muted-fo
 
 // ─── Add Convert Modal ────────────────────────────────────────────────────────
 
-function AddConvertModal({ branchName, shepherds, onClose }: {
+function AddConvertModal({ branchName, shepherds, selfShepherdId, selfRole, onClose }: {
   branchName?: string
   shepherds: Shepherd[]
+  selfShepherdId?: string
+  selfRole?: string
   onClose: () => void
 }) {
+  const isShepherd = selfRole === "flight_shepherd"
   const qc = useQueryClient()
   const [form, setForm] = useState({
     fullName: "", phone: "", address: "", locationWon: "",
     gender: "male", ageGroup: "adult", outreachType: "GOWAS",
     dateWon: new Date().toISOString().split("T")[0],
-    assignedShepherdId: "", initialNote: "",
+    assignedShepherdId: isShepherd && selfShepherdId ? selfShepherdId : "",
+    initialNote: "",
   })
 
   const mutation = useMutation({
@@ -197,18 +202,24 @@ function AddConvertModal({ branchName, shepherds, onClose }: {
             <p className="text-xs font-bold uppercase tracking-widest text-[#1B4F72] mb-3">Shepherd Assignment</p>
             <div>
               <label className={label}>Assign Flight Shepherd</label>
-              <select name="assignedShepherdId" value={form.assignedShepherdId} onChange={set} className={field}>
-                <option value="">— Unassigned (assign later) —</option>
-                {shepherds.map((s) => (
-                  <option key={s._id} value={s._id}>
-                    {s.name}{s.shepherdTag ? ` (${s.shepherdTag})` : ""}{s.shepherdCategory ? ` · ${s.shepherdCategory}` : ""}
-                    {s.soulsAssigned !== undefined ? ` · ${s.soulsAssigned} souls` : ""}
-                  </option>
-                ))}
-              </select>
+              {isShepherd ? (
+                <div className={`${field} bg-muted/50 text-muted-foreground cursor-not-allowed`}>
+                  Assigned to you
+                </div>
+              ) : (
+                <select name="assignedShepherdId" value={form.assignedShepherdId} onChange={set} className={field}>
+                  <option value="">— Unassigned (assign later) —</option>
+                  {shepherds.map((s) => (
+                    <option key={s._id} value={s._id}>
+                      {s.name}{s.shepherdTag ? ` (${s.shepherdTag})` : ""}{s.shepherdCategory ? ` · ${s.shepherdCategory}` : ""}
+                      {s.soulsAssigned !== undefined ? ` · ${s.soulsAssigned} souls` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
               {form.assignedShepherdId && (
                 <p className="text-xs text-green-600 mt-1.5">
-                  ✓ Shepherd will be notified immediately after registration
+                  ✓ {isShepherd ? "Assigned to you automatically" : "Shepherd will be notified immediately after registration"}
                 </p>
               )}
             </div>
@@ -243,14 +254,18 @@ function AddConvertModal({ branchName, shepherds, onClose }: {
 
 // ─── Convert Detail Drawer ────────────────────────────────────────────────────
 
-function ConvertDrawer({ soul, onClose, onUpdate }: {
+function ConvertDrawer({ soul, onClose, onUpdate, shepherds, canReassign }: {
   soul: Soul
   onClose: () => void
   onUpdate: () => void
+  shepherds: Shepherd[]
+  canReassign: boolean
 }) {
   const qc = useQueryClient()
   const [note, setNote] = useState("")
   const [activeTab, setActiveTab] = useState<"info" | "stage" | "notes">("info")
+  const [reassigning, setReassigning] = useState(false)
+  const [newShepherdId, setNewShepherdId] = useState("")
 
   const { data } = useQuery<{ success: boolean; data: Soul }>({
     queryKey: ["soul", soul._id],
@@ -290,6 +305,17 @@ function ConvertDrawer({ soul, onClose, onUpdate }: {
   const setStatus = (status: string) => {
     patchMutation.mutate({ status }, {
       onSuccess: () => toast.success(`Status updated to ${status}`),
+    })
+  }
+
+  const reassignShepherd = () => {
+    if (!newShepherdId) return
+    patchMutation.mutate({ assignedShepherdId: newShepherdId }, {
+      onSuccess: () => {
+        toast.success("Convert reassigned — shepherd notified")
+        setReassigning(false)
+        setNewShepherdId("")
+      },
     })
   }
 
@@ -421,6 +447,49 @@ function ConvertDrawer({ soul, onClose, onUpdate }: {
                   ))}
                 </div>
               </div>
+
+              {/* Reassign shepherd — coordinators and above only */}
+              {canReassign && (
+                <div className="space-y-2 pt-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Reassign Shepherd</p>
+                  {!reassigning ? (
+                    <button
+                      onClick={() => setReassigning(true)}
+                      className="w-full flex items-center justify-center gap-2 rounded-lg border border-gray-300 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <UserCheck className="h-3.5 w-3.5" /> Change Shepherd
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      <select
+                        value={newShepherdId}
+                        onChange={(e) => setNewShepherdId(e.target.value)}
+                        className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#1B4F72]/30"
+                      >
+                        <option value="">— Select shepherd —</option>
+                        {shepherds.map((s) => (
+                          <option key={s._id} value={s._id}>{s.name}{s.shepherdTag ? ` (${s.shepherdTag})` : ""}</option>
+                        ))}
+                      </select>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={reassignShepherd}
+                          disabled={!newShepherdId || patchMutation.isPending}
+                          className="flex-1 rounded-lg bg-[#1B4F72] text-white py-2 text-xs font-semibold hover:bg-[#154360] transition-colors disabled:opacity-40"
+                        >
+                          {patchMutation.isPending ? "Saving…" : "Confirm"}
+                        </button>
+                        <button
+                          onClick={() => { setReassigning(false); setNewShepherdId("") }}
+                          className="flex-1 rounded-lg border py-2 text-xs font-semibold text-gray-600 hover:bg-muted transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -513,7 +582,7 @@ export default function SoulsPage() {
   const [showModal, setShowModal] = useState(false)
   const [selectedSoul, setSelectedSoul] = useState<Soul | null>(null)
 
-  const canCreate = role ? hasMinRole(role, "branch_coordinator") : false
+  const canCreate = role ? hasMinRole(role, "flight_shepherd") : false
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value)
@@ -569,6 +638,8 @@ export default function SoulsPage() {
         <AddConvertModal
           branchName={orgsData?.name}
           shepherds={shepherdsData ?? []}
+          selfShepherdId={session?.user?.id}
+          selfRole={role}
           onClose={() => setShowModal(false)}
         />
       )}
@@ -577,6 +648,8 @@ export default function SoulsPage() {
           soul={selectedSoul}
           onClose={() => setSelectedSoul(null)}
           onUpdate={() => refetch()}
+          shepherds={shepherdsData ?? []}
+          canReassign={role ? hasMinRole(role, "branch_coordinator") : false}
         />
       )}
 

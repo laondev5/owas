@@ -3,7 +3,8 @@ import { Soul } from "@/lib/models/Soul"
 import { User } from "@/lib/models/User"
 import { Notification } from "@/lib/models/Notification"
 import { withAuth, ok, err } from "@/lib/api-helpers"
-import { triggerUserNotification, PUSHER_EVENTS } from "@/lib/pusher"
+import { triggerUserNotification } from "@/lib/pusher"
+import { sendMail, convertAssignedHtml } from "@/lib/mailer"
 import mongoose from "mongoose"
 
 // GET /api/souls — list souls with role-based scoping
@@ -106,31 +107,56 @@ export const POST = withAuth(async (req, { session }) => {
     .populate("assignedShepherdId", "name shepherdTag")
     .lean()
 
-  // Notify the assigned shepherd (non-blocking)
+  // Notify the assigned shepherd via Pusher + email (non-blocking)
   if (assignedShepherdId) {
-    const notifData = {
-      recipientId: new mongoose.Types.ObjectId(assignedShepherdId),
-      type: "convert_assigned" as const,
-      channel: "in_app" as const,
-      title: "New Convert Assigned",
-      body: `${fullName} has been assigned to you for follow-up. Please make contact within 48 hours.`,
-      relatedEntityId: soul._id,
-      relatedEntityType: "Soul",
-      status: "pending" as const,
-    }
+    const notifTitle = "New Convert Assigned"
+    const notifBody = `${fullName} has been assigned to you for follow-up. Please make contact within 48 hours.`
+    const loginUrl = `${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/souls`
 
-    Notification.create(notifData).then((notif) => {
-      triggerUserNotification(assignedShepherdId, {
-        id: notif._id.toString(),
-        type: "convert_assigned",
-        title: notifData.title,
-        body: notifData.body,
-        relatedEntityId: soul._id.toString(),
+    // Fetch shepherd's email and name for the email
+    User.findById(assignedShepherdId).select("name email").lean().then((shepherd) => {
+      const notifData = {
+        recipientId: new mongoose.Types.ObjectId(assignedShepherdId),
+        type: "convert_assigned" as const,
+        channel: "in_app" as const,
+        title: notifTitle,
+        body: notifBody,
+        relatedEntityId: soul._id,
         relatedEntityType: "Soul",
-        createdAt: notif.createdAt.toISOString(),
-      })
-    }).catch((e) => console.error("[soul notify]", e))
+        status: "pending" as const,
+      }
+
+      // In-app notification + Pusher
+      Notification.create(notifData).then((notif) => {
+        triggerUserNotification(assignedShepherdId, {
+          id: notif._id.toString(),
+          type: "convert_assigned",
+          title: notifTitle,
+          body: notifBody,
+          relatedEntityId: soul._id.toString(),
+          relatedEntityType: "Soul",
+          createdAt: notif.createdAt.toISOString(),
+        })
+      }).catch((e) => console.error("[soul notify pusher]", e))
+
+      // Email notification
+      if (shepherd?.email) {
+        sendMail({
+          to: shepherd.email,
+          subject: `New Convert Assigned: ${fullName}`,
+          html: convertAssignedHtml({
+            shepherdName: shepherd.name as string,
+            convertName: fullName,
+            convertPhone: phone?.trim() || undefined,
+            convertAddress: address?.trim() || undefined,
+            locationWon: locationWon?.trim() || undefined,
+            dateWon: new Date(dateWon).toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" }),
+            loginUrl,
+          }),
+        }).catch((e) => console.error("[soul notify email]", e))
+      }
+    }).catch((e) => console.error("[soul notify user lookup]", e))
   }
 
   return ok(populated, 201)
-}, "branch_coordinator")
+}, "flight_shepherd")
