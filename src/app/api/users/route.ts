@@ -11,8 +11,30 @@ import bcrypt from "bcryptjs"
 import crypto from "crypto"
 import mongoose from "mongoose"
 
+// Word-based passphrase instead of a raw random token. A base64url blob like
+// "xK9_QaZ3mWe" reads exactly like an API key / reset token, which is a strong
+// spam/phishing signal to mail filters when it sits next to "password"/"login".
+// A capitalized-word passphrase reads like something a person typed instead.
+const PASSPHRASE_WORDS = [
+  "grace", "faith", "mercy", "hope", "light", "harvest", "shepherd", "vision",
+  "spirit", "glory", "anchor", "beacon", "steady", "truth", "wisdom", "courage",
+  "gentle", "mighty", "precious", "radiant", "serene", "triumph", "victory",
+  "zealous", "bright", "kindle", "noble", "peaceful", "renew", "faithful",
+  "blessed", "guided", "worthy", "risen", "shining", "humble", "chosen",
+  "eternal", "diligent", "abundant", "constant", "genuine", "sincere", "valiant",
+]
+
 function generatePassword(): string {
-  return crypto.randomBytes(9).toString("base64url")
+  const usedIndexes = new Set<number>()
+  const pickWord = () => {
+    let i = crypto.randomInt(0, PASSPHRASE_WORDS.length)
+    while (usedIndexes.has(i)) i = crypto.randomInt(0, PASSPHRASE_WORDS.length)
+    usedIndexes.add(i)
+    const w = PASSPHRASE_WORDS[i]
+    return w.charAt(0).toUpperCase() + w.slice(1)
+  }
+  const number = crypto.randomInt(100, 999)
+  return `${pickWord()}${pickWord()}${pickWord()}${number}`
 }
 
 // GET /api/users — list users (branch_coordinator+ can list their org's users)
