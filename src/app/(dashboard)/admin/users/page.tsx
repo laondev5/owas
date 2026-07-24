@@ -6,8 +6,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { cn, ROLE_LABELS } from "@/lib/utils"
 import {
-  USER_ROLES, ORG_LEVELS, ORG_COORDINATOR_ROLE, BRANCH_STAFF_ROLES, getChildOrgLevel,
-  type UserRole, type OrgLevel,
+  USER_ROLES, ORG_LEVELS, ORG_COORDINATOR_ROLE, BRANCH_STAFF_ROLES, getChildOrgLevel, TITLES,
+  type UserRole, type OrgLevel, type Title,
 } from "@/lib/constants"
 import { Plus, X, Search, UserX, Pencil, Trash2, ChevronRight } from "lucide-react"
 
@@ -103,6 +103,7 @@ function CreateUserModal({ orgs, onClose }: { orgs: OrgDoc[]; onClose: () => voi
 
   const [form, setForm] = useState({
     name: "", email: "",
+    title: "" as Title | "",
     role: (allowedRoles[0] ?? "viewer") as UserRole,
     organizationId: !isSuperAdmin && ownRole === "branch_coordinator" ? (ownOrgId ?? "") : "",
     organizationLevel: "branch" as OrgLevel,
@@ -122,7 +123,7 @@ function CreateUserModal({ orgs, onClose }: { orgs: OrgDoc[]; onClose: () => voi
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, title: form.title || undefined }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? "Failed to create user")
@@ -162,6 +163,13 @@ function CreateUserModal({ orgs, onClose }: { orgs: OrgDoc[]; onClose: () => voi
             <div className="space-y-1">
               <label className={labelCls}>Email *</label>
               <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="jane@example.com" className={inputCls} />
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <label className={labelCls}>Title</label>
+              <select value={form.title} onChange={(e) => set("title", e.target.value as Title | "")} className={inputCls}>
+                <option value="">— No title —</option>
+                {TITLES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
             </div>
             <div className="space-y-1 sm:col-span-2">
               <label className={labelCls}>Role *</label>

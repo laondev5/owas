@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { USER_ROLES, SHEPHERD_CATEGORIES, ORG_LEVELS } from "@/lib/constants"
+import { USER_ROLES, SHEPHERD_CATEGORIES, ORG_LEVELS, TITLES } from "@/lib/constants"
 
 export const LoginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -8,6 +8,7 @@ export const LoginSchema = z.object({
 
 export const CreateUserSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
+  title: z.enum(TITLES).optional(),
   email: z.string().email("Invalid email address"),
   role: z.enum(USER_ROLES),
   organizationId: z.string().length(24, "Invalid organization ID"),

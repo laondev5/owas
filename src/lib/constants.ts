@@ -18,6 +18,22 @@ export type UserRole = (typeof USER_ROLES)[number]
 export const SHEPHERD_CATEGORIES = ["YM", "YF", "M", "W"] as const
 export type ShepherdCategory = (typeof SHEPHERD_CATEGORIES)[number]
 
+export const TITLES = [
+  "Teenager",
+  "Bro",
+  "Sis",
+  "Exhorter",
+  "Deacon",
+  "Deaconess",
+  "Snr Deacon",
+  "Snr Deaconess",
+  "Pastor",
+  "District Pastor",
+  "Elders",
+  "Minister",
+] as const
+export type Title = (typeof TITLES)[number]
+
 export const ORG_LEVELS = ["national", "region", "zone", "district", "branch"] as const
 export type OrgLevel = (typeof ORG_LEVELS)[number]
 

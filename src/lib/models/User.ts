@@ -1,15 +1,16 @@
 import mongoose, { Schema, Document, Model } from "mongoose"
 import {
-  USER_ROLES, SHEPHERD_CATEGORIES, ORG_LEVELS,
-  type UserRole, type ShepherdCategory, type OrgLevel,
+  USER_ROLES, SHEPHERD_CATEGORIES, ORG_LEVELS, TITLES,
+  type UserRole, type ShepherdCategory, type OrgLevel, type Title,
 } from "@/lib/constants"
 
 // Re-export so existing imports from this file keep working
-export type { UserRole, ShepherdCategory, OrgLevel }
-export { USER_ROLES, SHEPHERD_CATEGORIES, ORG_LEVELS }
+export type { UserRole, ShepherdCategory, OrgLevel, Title }
+export { USER_ROLES, SHEPHERD_CATEGORIES, ORG_LEVELS, TITLES }
 
 export interface IUser extends Document {
   name: string
+  title?: Title
   email: string
   passwordHash: string
   role: UserRole
@@ -29,6 +30,7 @@ export interface IUser extends Document {
 const UserSchema = new Schema<IUser>(
   {
     name: { type: String, required: true, trim: true },
+    title: { type: String, enum: TITLES },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
     role: { type: String, enum: USER_ROLES, required: true },
