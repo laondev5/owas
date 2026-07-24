@@ -504,8 +504,8 @@ function ConvertDrawer({ soul, onClose, onUpdate, shepherds, canReassign }: {
                 { key: "hsos", label: "HSOS", desc: "Holy Spirit and spiritual gifts" },
                 { key: "zibi", label: "ZIBI", desc: "Leadership development" },
               ].map(({ key, label: stageLabel, desc }) => {
-                const enrolled = detail.integrationStage[`${key}Enrolled` as keyof IntegrationStage]
-                const completed = detail.integrationStage[`${key}Completed` as keyof IntegrationStage]
+                const enrolled = detail.integrationStage?.[`${key}Enrolled` as keyof IntegrationStage]
+                const completed = detail.integrationStage?.[`${key}Completed` as keyof IntegrationStage]
                 return (
                   <div key={key} className={`p-3.5 rounded-xl border-2 ${completed ? "border-green-200 bg-green-50" : enrolled ? "border-blue-200 bg-blue-50" : "border-gray-100 bg-gray-50"}`}>
                     <div className="flex items-center justify-between">

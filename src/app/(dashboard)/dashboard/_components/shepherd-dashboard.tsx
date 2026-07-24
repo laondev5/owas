@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
 import { formatNumber } from "@/lib/utils"
 import Link from "next/link"
+import SupervisorFeedbackCard from "./supervisor-feedback-card"
 
 function daysSince(dateStr: string) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
@@ -135,6 +136,8 @@ export default function ShepherdDashboard() {
           <p className="text-sm text-center text-muted-foreground py-8">No converts assigned yet</p>
         )}
       </div>
+
+      <SupervisorFeedbackCard />
     </div>
   )
 }

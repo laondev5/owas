@@ -3,6 +3,8 @@
 import { useQuery } from "@tanstack/react-query"
 import { formatNumber } from "@/lib/utils"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
+import SupervisorFeedbackCard from "./supervisor-feedback-card"
+import RankWidget from "./rank-widget"
 
 export default function DistrictDashboard() {
   const { data, isLoading } = useQuery<{ success: boolean; data: any[] }>({
@@ -33,6 +35,8 @@ export default function DistrictDashboard() {
           <strong>{branchesOutstanding} branches</strong> have not submitted their report this week.
         </div>
       )}
+
+      <RankWidget level="district" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
@@ -65,6 +69,8 @@ export default function DistrictDashboard() {
           </ResponsiveContainer>
         </div>
       )}
+
+      <SupervisorFeedbackCard />
     </div>
   )
 }

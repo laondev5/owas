@@ -42,8 +42,19 @@ export default auth((req) => {
 
   const role = (session.user as Record<string, unknown>).role as string ?? "viewer"
 
-  // Admin-only routes
-  if (pathname.startsWith("/admin") && role !== "super_admin") {
+  // Admin routes — organizations/users are open to coordinators (scoped further
+  // at the API level); everything else under /admin (audit, notifications) stays
+  // super_admin-only.
+  if (pathname.startsWith("/admin/organizations") && !hasMinRole(role, "district_coordinator")) {
+    return NextResponse.redirect(new URL("/dashboard", req.url))
+  } else if (pathname.startsWith("/admin/users") && !hasMinRole(role, "branch_coordinator")) {
+    return NextResponse.redirect(new URL("/dashboard", req.url))
+  } else if (
+    pathname.startsWith("/admin") &&
+    !pathname.startsWith("/admin/organizations") &&
+    !pathname.startsWith("/admin/users") &&
+    role !== "super_admin"
+  ) {
     return NextResponse.redirect(new URL("/dashboard", req.url))
   }
 

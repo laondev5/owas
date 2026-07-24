@@ -1,12 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import { useSession } from "next-auth/react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Plus, Pencil, X, Check, ChevronRight } from "lucide-react"
 import type { OrgLevel } from "@/lib/constants"
-import { ORG_LEVELS } from "@/lib/constants"
+import { ORG_LEVELS, getChildOrgLevel } from "@/lib/constants"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -107,7 +108,18 @@ function CreatePanel({
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
-  const [form, setForm] = useState<OrgForm>(EMPTY_FORM)
+  const { data: session } = useSession()
+  const isSuperAdmin = session?.user?.role === "super_admin"
+  const ownOrgId = session?.user?.organizationId
+  const childLevel = !isSuperAdmin
+    ? getChildOrgLevel(session?.user?.organizationLevel as OrgLevel)
+    : null
+
+  const [form, setForm] = useState<OrgForm>(() =>
+    !isSuperAdmin && childLevel
+      ? { ...EMPTY_FORM, type: childLevel, parentId: ownOrgId ?? "" }
+      : EMPTY_FORM
+  )
 
   const parentType = PARENT_TYPE[form.type]
   const parentOrgs = parentType ? orgs.filter((o) => o.type === parentType && o.isActive) : []
@@ -119,7 +131,7 @@ function CreatePanel({
         code: form.code,
         type: form.type,
         parentId: form.parentId || undefined,
-        coordinatorId: form.coordinatorId || undefined,
+        coordinatorId: isSuperAdmin ? form.coordinatorId || undefined : undefined,
         isActive: form.isActive,
       } as OrgForm),
     onSuccess: () => {
@@ -133,6 +145,22 @@ function CreatePanel({
   const set = <K extends keyof OrgForm>(k: K, v: OrgForm[K]) =>
     setForm((f) => ({ ...f, [k]: v }))
 
+  if (!isSuperAdmin && !childLevel) {
+    return (
+      <div className="bg-white border rounded-2xl p-6 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-gray-900">New Organization</h3>
+          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100">
+            <X className="h-4 w-4 text-gray-500" />
+          </button>
+        </div>
+        <p className="text-sm text-gray-500">
+          Your role has no organization level below it to create.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-white border rounded-2xl p-6 shadow-sm space-y-4">
       <div className="flex items-center justify-between">
@@ -141,6 +169,11 @@ function CreatePanel({
           <X className="h-4 w-4 text-gray-500" />
         </button>
       </div>
+      {!isSuperAdmin && (
+        <p className="text-xs text-gray-500">
+          You can create a new <span className="font-semibold capitalize">{childLevel}</span> under your own organization.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1">
@@ -163,17 +196,21 @@ function CreatePanel({
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-gray-600">Type *</label>
-          <select
-            value={form.type}
-            onChange={(e) => set("type", e.target.value as OrgLevel)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B4F72]/30 bg-white"
-          >
-            {ORG_LEVELS.map((l) => (
-              <option key={l} value={l}>
-                {l.charAt(0).toUpperCase() + l.slice(1)}
-              </option>
-            ))}
-          </select>
+          {isSuperAdmin ? (
+            <select
+              value={form.type}
+              onChange={(e) => set("type", e.target.value as OrgLevel)}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B4F72]/30 bg-white"
+            >
+              {ORG_LEVELS.map((l) => (
+                <option key={l} value={l}>
+                  {l.charAt(0).toUpperCase() + l.slice(1)}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p className="text-sm text-gray-600 border rounded-lg px-3 py-2 bg-gray-50 capitalize">{form.type}</p>
+          )}
         </div>
 
         {parentType && (
@@ -181,18 +218,24 @@ function CreatePanel({
             <label className="text-xs font-medium text-gray-600">
               Parent {parentType.charAt(0).toUpperCase() + parentType.slice(1)}
             </label>
-            <select
-              value={form.parentId}
-              onChange={(e) => set("parentId", e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B4F72]/30 bg-white"
-            >
-              <option value="">— None —</option>
-              {parentOrgs.map((o) => (
-                <option key={o._id} value={o._id}>
-                  {o.name} ({o.code})
-                </option>
-              ))}
-            </select>
+            {isSuperAdmin ? (
+              <select
+                value={form.parentId}
+                onChange={(e) => set("parentId", e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B4F72]/30 bg-white"
+              >
+                <option value="">— None —</option>
+                {parentOrgs.map((o) => (
+                  <option key={o._id} value={o._id}>
+                    {o.name} ({o.code})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-sm text-gray-600 border rounded-lg px-3 py-2 bg-gray-50">
+                {orgs.find((o) => o._id === form.parentId)?.name ?? "Your organization"}
+              </p>
+            )}
           </div>
         )}
 
@@ -322,6 +365,8 @@ function EditRow({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function OrganizationsPage() {
+  const { data: session } = useSession()
+  const isSuperAdmin = session?.user?.role === "super_admin"
   const [showCreate, setShowCreate] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -467,15 +512,19 @@ export default function OrganizationsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 border-b border-gray-100">
-                        <button
-                          onClick={() =>
-                            setEditingId((prev) => (prev === org._id ? null : org._id))
-                          }
-                          className="flex items-center gap-1 text-xs text-[#1B4F72] hover:underline font-medium"
-                        >
-                          <Pencil className="h-3 w-3" />
-                          Edit
-                        </button>
+                        {isSuperAdmin ? (
+                          <button
+                            onClick={() =>
+                              setEditingId((prev) => (prev === org._id ? null : org._id))
+                            }
+                            className="flex items-center gap-1 text-xs text-[#1B4F72] hover:underline font-medium"
+                          >
+                            <Pencil className="h-3 w-3" />
+                            Edit
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
                       </td>
                     </tr>
 

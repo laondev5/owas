@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { formatNumber } from "@/lib/utils"
+import SupervisorFeedbackCard from "./supervisor-feedback-card"
 
 interface ZonalReport {
   _id: string
@@ -94,6 +95,8 @@ export default function RegionalDashboard() {
           <p className="text-sm text-center text-muted-foreground py-8">No zone reports yet</p>
         )}
       </div>
+
+      <SupervisorFeedbackCard />
     </div>
   )
 }

@@ -2,6 +2,8 @@ import { connectDB } from "@/lib/db"
 import { Organization } from "@/lib/models/Organization"
 import { OrganizationSchema } from "@/lib/schemas/reports"
 import { withAuth, logAudit, ok, err } from "@/lib/api-helpers"
+import { getChildOrgLevel } from "@/lib/hierarchy"
+import type { OrgLevel } from "@/lib/constants"
 import mongoose from "mongoose"
 
 // GET /api/organizations — list organizations
@@ -23,12 +25,26 @@ export const GET = withAuth(async (req) => {
   return ok(orgs)
 }, "viewer")
 
-// POST /api/organizations — create organization (super_admin only)
+// POST /api/organizations — create organization
+// super_admin: unrestricted. Coordinators (district_coordinator+): may only
+// create the org level directly below their own, parented to their own org
+// (e.g. a district_coordinator creates a branch under their own district).
 export const POST = withAuth(async (req, { session }) => {
   const body = await req.json()
   const result = OrganizationSchema.safeParse(body)
   if (!result.success) {
     return err(result.error.errors[0].message)
+  }
+
+  let parentId = result.data.parentId
+  const type: OrgLevel = result.data.type
+
+  if (session.user.role !== "super_admin") {
+    const childLevel = getChildOrgLevel(session.user.organizationLevel as OrgLevel)
+    if (!childLevel || type !== childLevel) {
+      return err(`You can only create a "${childLevel ?? "no"}" level organization`, 403)
+    }
+    parentId = session.user.organizationId
   }
 
   await connectDB()
@@ -39,9 +55,7 @@ export const POST = withAuth(async (req, { session }) => {
   const org = await Organization.create({
     ...result.data,
     code: result.data.code.toUpperCase(),
-    parentId: result.data.parentId
-      ? new mongoose.Types.ObjectId(result.data.parentId)
-      : undefined,
+    parentId: parentId ? new mongoose.Types.ObjectId(parentId) : undefined,
   })
 
   await logAudit(
@@ -54,4 +68,4 @@ export const POST = withAuth(async (req, { session }) => {
   )
 
   return ok(org, 201)
-}, "super_admin")
+}, "district_coordinator")

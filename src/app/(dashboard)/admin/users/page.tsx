@@ -5,7 +5,10 @@ import { useSession } from "next-auth/react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { cn, ROLE_LABELS } from "@/lib/utils"
-import { USER_ROLES, ORG_LEVELS, type UserRole, type OrgLevel } from "@/lib/constants"
+import {
+  USER_ROLES, ORG_LEVELS, ORG_COORDINATOR_ROLE, BRANCH_STAFF_ROLES, getChildOrgLevel,
+  type UserRole, type OrgLevel,
+} from "@/lib/constants"
 import { Plus, X, Search, UserX, Pencil, Trash2, ChevronRight } from "lucide-react"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -27,6 +30,7 @@ interface OrgDoc {
   name: string
   code: string
   type: OrgLevel
+  parentId?: { _id: string; name: string; code: string; type: string } | null
 }
 
 interface UserListResponse {
@@ -76,10 +80,31 @@ const labelCls = "text-xs font-medium text-gray-600"
 
 function CreateUserModal({ orgs, onClose }: { orgs: OrgDoc[]; onClose: () => void }) {
   const qc = useQueryClient()
+  const { data: session } = useSession()
+  const isSuperAdmin = session?.user?.role === "super_admin"
+  const ownOrgId = session?.user?.organizationId
+  const ownOrgLevel = session?.user?.organizationLevel as OrgLevel | undefined
+  const ownRole = session?.user?.role as UserRole | undefined
+
+  // Non-admins may only create the role directly under them, scoped to their own org subtree.
+  const allowedRoles: UserRole[] = isSuperAdmin
+    ? [...USER_ROLES]
+    : ownRole === "branch_coordinator"
+      ? BRANCH_STAFF_ROLES
+      : ownRole && ownOrgLevel && getChildOrgLevel(ownOrgLevel)
+        ? [ORG_COORDINATOR_ROLE[getChildOrgLevel(ownOrgLevel)!]]
+        : []
+
+  const eligibleOrgs = isSuperAdmin
+    ? orgs
+    : ownRole === "branch_coordinator"
+      ? orgs.filter((o) => o._id === ownOrgId)
+      : orgs.filter((o) => o.parentId?._id === ownOrgId)
+
   const [form, setForm] = useState({
-    name: "", email: "", password: "",
-    role: "viewer" as UserRole,
-    organizationId: "",
+    name: "", email: "",
+    role: (allowedRoles[0] ?? "viewer") as UserRole,
+    organizationId: !isSuperAdmin && ownRole === "branch_coordinator" ? (ownOrgId ?? "") : "",
     organizationLevel: "branch" as OrgLevel,
   })
 
@@ -103,21 +128,29 @@ function CreateUserModal({ orgs, onClose }: { orgs: OrgDoc[]; onClose: () => voi
       if (!res.ok) throw new Error(json.error ?? "Failed to create user")
       return json.data
     },
-    onSuccess: () => {
-      toast.success("User created — welcome email sent")
+    onSuccess: (data: { emailSent: boolean }) => {
+      if (data.emailSent) {
+        toast.success("User created — a welcome email with their login password was sent")
+      } else {
+        toast.warning("User created, but the welcome email failed to send — check email server config or reset their password manually")
+      }
       qc.invalidateQueries({ queryKey: ["users"] })
+      qc.invalidateQueries({ queryKey: ["organizations"] })
       onClose()
     },
     onError: (e: Error) => toast.error(e.message),
   })
 
-  const valid = form.name.length >= 2 && form.email.includes("@") && form.password.length >= 8 && !!form.organizationId
+  const valid = form.name.length >= 2 && form.email.includes("@") && !!form.organizationId
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold text-gray-900">Create User</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Create User</h2>
+            <p className="text-xs text-gray-400 mt-0.5">A login password is generated automatically and emailed to them</p>
+          </div>
           <button onClick={onClose} className="p-1 rounded hover:bg-gray-100"><X className="h-4 w-4 text-gray-500" /></button>
         </div>
         <div className="space-y-4">
@@ -130,29 +163,38 @@ function CreateUserModal({ orgs, onClose }: { orgs: OrgDoc[]; onClose: () => voi
               <label className={labelCls}>Email *</label>
               <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="jane@example.com" className={inputCls} />
             </div>
-            <div className="space-y-1">
-              <label className={labelCls}>Password *</label>
-              <input type="password" value={form.password} onChange={(e) => set("password", e.target.value)} placeholder="Min. 8 characters" className={inputCls} />
-            </div>
-            <div className="space-y-1">
+            <div className="space-y-1 sm:col-span-2">
               <label className={labelCls}>Role *</label>
               <select value={form.role} onChange={(e) => set("role", e.target.value as UserRole)} className={inputCls}>
-                {USER_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                {allowedRoles.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
               </select>
             </div>
             <div className="space-y-1 sm:col-span-2">
               <label className={labelCls}>Organization *</label>
-              <select value={form.organizationId} onChange={(e) => handleOrgChange(e.target.value)} className={inputCls}>
-                <option value="">— Select organization —</option>
-                {orgs.map((o) => <option key={o._id} value={o._id}>{o.name} ({o.code}) — {o.type}</option>)}
-              </select>
+              {!isSuperAdmin && ownRole === "branch_coordinator" ? (
+                <p className="text-sm text-gray-600 border rounded-lg px-3 py-2 bg-gray-50">
+                  {orgs.find((o) => o._id === ownOrgId)?.name ?? "Your branch"}
+                </p>
+              ) : (
+                <select value={form.organizationId} onChange={(e) => handleOrgChange(e.target.value)} className={inputCls}>
+                  <option value="">— Select organization —</option>
+                  {eligibleOrgs.map((o) => <option key={o._id} value={o._id}>{o.name} ({o.code}) — {o.type}</option>)}
+                </select>
+              )}
+              {!isSuperAdmin && eligibleOrgs.length === 0 && ownRole !== "branch_coordinator" && (
+                <p className="text-xs text-amber-600">
+                  No eligible organization yet — create one first under Organizations.
+                </p>
+              )}
             </div>
-            <div className="space-y-1 sm:col-span-2">
-              <label className={labelCls}>Organization Level</label>
-              <select value={form.organizationLevel} onChange={(e) => set("organizationLevel", e.target.value as OrgLevel)} className={inputCls}>
-                {ORG_LEVELS.map((l) => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
-              </select>
-            </div>
+            {isSuperAdmin && (
+              <div className="space-y-1 sm:col-span-2">
+                <label className={labelCls}>Organization Level</label>
+                <select value={form.organizationLevel} onChange={(e) => set("organizationLevel", e.target.value as OrgLevel)} className={inputCls}>
+                  {ORG_LEVELS.map((l) => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
+                </select>
+              </div>
+            )}
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button onClick={onClose} className="px-4 py-2 text-sm rounded-lg border hover:bg-gray-50 transition-colors">Cancel</button>

@@ -16,6 +16,7 @@ interface Shepherd {
 export default function InvitePage() {
   const { data: session } = useSession()
   const branchId = session?.user?.organizationId ?? ""
+  const isShepherd = session?.user?.role === "flight_shepherd"
 
   const [eventName, setEventName] = useState("")
   const [shepherdId, setShepherdId] = useState("")
@@ -31,8 +32,10 @@ export default function InvitePage() {
       if (!res.ok) return []
       return (await res.json()).data as Shepherd[]
     },
-    enabled: !!session,
+    enabled: !!session && !isShepherd,
   })
+
+  const effectiveShepherdId = isShepherd ? (session?.user?.id ?? "") : shepherdId
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
 
@@ -40,9 +43,9 @@ export default function InvitePage() {
     const params = new URLSearchParams()
     if (branchId) params.set("branch", branchId)
     if (eventName.trim()) params.set("event", eventName.trim())
-    if (shepherdId) params.set("shepherd", shepherdId)
+    if (effectiveShepherdId) params.set("shepherd", effectiveShepherdId)
     return `${baseUrl}/join?${params.toString()}`
-  }, [baseUrl, branchId, eventName, shepherdId])
+  }, [baseUrl, branchId, eventName, effectiveShepherdId])
 
   const generate = () => setShowQr(true)
 
@@ -110,23 +113,31 @@ export default function InvitePage() {
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-gray-700">
             Pre-assign Shepherd{" "}
-            <span className="text-gray-400 font-normal">(optional)</span>
+            {!isShepherd && <span className="text-gray-400 font-normal">(optional)</span>}
           </label>
-          <select
-            value={shepherdId}
-            onChange={(e) => { setShepherdId(e.target.value); setShowQr(false) }}
-            className="w-full rounded-xl border bg-gray-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#1B4F72]/30 focus:bg-white transition-all"
-          >
-            <option value="">No specific shepherd — assign manually later</option>
-            {shepherds.map((s) => (
-              <option key={s._id} value={s._id}>
-                {s.name}{s.shepherdTag ? ` · ${s.shepherdTag}` : ""}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-gray-400">
-            All converts who register through this link will automatically be assigned to the selected shepherd.
-          </p>
+          {isShepherd ? (
+            <p className="text-sm text-gray-600 border rounded-xl px-4 py-3 bg-gray-50">
+              New converts from this link are automatically assigned to you.
+            </p>
+          ) : (
+            <>
+              <select
+                value={shepherdId}
+                onChange={(e) => { setShepherdId(e.target.value); setShowQr(false) }}
+                className="w-full rounded-xl border bg-gray-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#1B4F72]/30 focus:bg-white transition-all"
+              >
+                <option value="">No specific shepherd — assign manually later</option>
+                {shepherds.map((s) => (
+                  <option key={s._id} value={s._id}>
+                    {s.name}{s.shepherdTag ? ` · ${s.shepherdTag}` : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400">
+                All converts who register through this link will automatically be assigned to the selected shepherd.
+              </p>
+            </>
+          )}
         </div>
 
         <button
@@ -224,7 +235,7 @@ export default function InvitePage() {
               <li>New converts scan it with their phone camera — no app download needed</li>
               <li>They fill in their name, phone, address, and click Submit</li>
               <li>Their record appears instantly in the Converts Registry</li>
-              {shepherdId && <li>All registrations from this link are automatically assigned to the selected shepherd</li>}
+              {effectiveShepherdId && <li>All registrations from this link are automatically assigned to {isShepherd ? "you" : "the selected shepherd"}</li>}
             </ul>
           </div>
         </div>

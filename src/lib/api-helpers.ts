@@ -70,6 +70,16 @@ export async function logAudit(
   }
 }
 
+// Base URL for links embedded in outgoing emails/notifications.
+// NEXTAUTH_URL must be set explicitly in production (Vercel project env vars —
+// .env.local never gets deployed). VERCEL_URL is auto-injected by Vercel as a
+// last-resort fallback so links never silently point at localhost in prod.
+export function getAppUrl(): string {
+  if (process.env.NEXTAUTH_URL) return process.env.NEXTAUTH_URL
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  return "http://localhost:3000"
+}
+
 export function ok<T>(data: T, status = 200): Response {
   return NextResponse.json({ success: true, data }, { status })
 }

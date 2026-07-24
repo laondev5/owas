@@ -18,6 +18,7 @@ import {
   Bell,
   X,
   QrCode,
+  MessageSquare,
 } from "lucide-react"
 import type { UserRole } from "@/lib/models/User"
 import { ROLE_HIERARCHY } from "@/lib/utils"
@@ -57,8 +58,9 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "Converts", href: "/souls", icon: Users, minRole: "flight_shepherd" },
       { label: "Flight Shepherds", href: "/shepherds", icon: Users, minRole: "branch_coordinator" },
-      { label: "Invite / QR Code", href: "/outreach/invite", icon: QrCode, minRole: "branch_coordinator" },
+      { label: "Invite / QR Code", href: "/outreach/invite", icon: QrCode, minRole: "flight_shepherd" },
       { label: "SML Registry", href: "/sml", icon: Award, minRole: "chief_trainer" },
+      { label: "My Team", href: "/team", icon: MessageSquare, minRole: "branch_coordinator" },
     ],
   },
   {
@@ -79,8 +81,8 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: "Administration",
     items: [
-      { label: "Organizations", href: "/admin/organizations", icon: Settings, minRole: "super_admin" },
-      { label: "Users", href: "/admin/users", icon: Users, minRole: "super_admin" },
+      { label: "Organizations", href: "/admin/organizations", icon: Settings, minRole: "district_coordinator" },
+      { label: "Users", href: "/admin/users", icon: Users, minRole: "branch_coordinator" },
       { label: "Notifications", href: "/admin/notifications", icon: Settings, minRole: "super_admin" },
       { label: "Audit Logs", href: "/admin/audit", icon: Settings, minRole: "super_admin" },
     ],

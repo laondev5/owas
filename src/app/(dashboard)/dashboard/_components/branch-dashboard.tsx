@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
 import { formatNumber } from "@/lib/utils"
 import Link from "next/link"
+import SupervisorFeedbackCard from "./supervisor-feedback-card"
+import RankWidget from "./rank-widget"
 
 function getWeekEnding() {
   const d = new Date()
@@ -13,7 +15,15 @@ function getWeekEnding() {
   return d
 }
 
-export default function BranchDashboard() {
+type Focus = "coordinator" | "training" | "outreach"
+
+const FOCUS_TITLE: Record<Focus, string> = {
+  coordinator: "Branch Dashboard",
+  training: "Training Dashboard",
+  outreach: "Mission Field Dashboard",
+}
+
+export default function BranchDashboard({ focus = "coordinator" }: { focus?: Focus }) {
   const { data: session } = useSession()
 
   const { data: reportsData, isLoading: reportsLoading } = useQuery<{ success: boolean; data: any[] }>({
@@ -40,6 +50,37 @@ export default function BranchDashboard() {
   const activeSouls = souls.filter((s: any) => s.status === "active").length
   const baptized = reports.slice(0, 4).reduce((s: number, r: any) => s + (r.baptism?.baptized ?? 0), 0)
   const shepherds = latestReport?.flightShepherds?.totalActive ?? 0
+  const totalParticipants = reports.slice(0, 4).reduce((s: number, r: any) => s + (r.gowas?.participants ?? 0), 0)
+  const totalSoulsReached = reports.slice(0, 4).reduce((s: number, r: any) => s + (r.gowas?.soulsReached ?? 0), 0)
+
+  const fiaEnrolledTotal = (r: any) =>
+    !r ? 0 : ["familyClass", "responsibilityClass", "sortingOut", "hsos", "zibi"]
+      .reduce((sum, key) => sum + (r.fia?.[key]?.enrolled ?? 0), 0)
+  const fiaCompletedTotal = (r: any) =>
+    !r ? 0 : ["familyClass", "responsibilityClass", "sortingOut", "hsos", "zibi"]
+      .reduce((sum, key) => sum + (r.fia?.[key]?.completed ?? 0), 0)
+
+  const statCards =
+    focus === "training"
+      ? [
+          { label: "FIA Enrolled (all stages)", value: fiaEnrolledTotal(latestReport) },
+          { label: "FIA Completed (all stages)", value: fiaCompletedTotal(latestReport) },
+          { label: "EE Trained", value: latestReport?.evangelismExplosion?.trained ?? 0 },
+          { label: "HST Status", value: latestReport?.hst?.status ?? "—", raw: true },
+        ]
+      : focus === "outreach"
+        ? [
+            { label: "GOWAS Participants (4 wks)", value: totalParticipants },
+            { label: "Souls Reached (4 wks)", value: totalSoulsReached },
+            { label: "Assigned to Shepherds", value: latestReport?.followUp?.assignedToShepherds ?? 0 },
+            { label: "Active Follow-Up", value: latestReport?.followUp?.active ?? 0 },
+          ]
+        : [
+            { label: "Souls Won (4 wks)", value: totalSouls },
+            { label: "Active Converts", value: activeSouls },
+            { label: "Flight Shepherds", value: shepherds },
+            { label: "Baptized (4 wks)", value: baptized },
+          ]
 
   const fiaStages = latestReport ? [
     { label: "Family Class", enrolled: latestReport.fia?.familyClass?.enrolled ?? 0 },
@@ -53,7 +94,7 @@ export default function BranchDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Branch Dashboard</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{FOCUS_TITLE[focus]}</h1>
         <p className="text-sm text-muted-foreground mt-1">This week at a glance</p>
       </div>
 
@@ -66,19 +107,18 @@ export default function BranchDashboard() {
         )}
       </div>
 
+      <RankWidget level="branch" />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Souls Won (4 wks)", value: totalSouls },
-          { label: "Active Converts", value: activeSouls },
-          { label: "Flight Shepherds", value: shepherds },
-          { label: "Baptized (4 wks)", value: baptized },
-        ].map((s) => (
+        {statCards.map((s) => (
           <div key={s.label} className="rounded-xl border bg-card p-5 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">{s.label}</p>
             {reportsLoading ? (
               <div className="animate-pulse h-8 w-20 rounded bg-muted" />
             ) : (
-              <p className="text-3xl font-bold text-gray-900">{formatNumber(s.value)}</p>
+              <p className="text-3xl font-bold text-gray-900 capitalize">
+                {"raw" in s && s.raw ? s.value : formatNumber(s.value as number)}
+              </p>
             )}
           </div>
         ))}
@@ -127,6 +167,8 @@ export default function BranchDashboard() {
           </div>
         </div>
       )}
+
+      <SupervisorFeedbackCard />
     </div>
   )
 }

@@ -64,4 +64,4 @@ export const GET = withAuth(async (req, { session }) => {
   )
 
   return ok(shepherdsWithCount)
-}, "branch_coordinator")
+}, "chief_trainer")

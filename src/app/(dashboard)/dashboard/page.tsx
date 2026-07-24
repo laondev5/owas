@@ -21,8 +21,8 @@ export default async function DashboardPage() {
   if (role === "zonal_coordinator") return <ZonalDashboard />
   if (role === "district_coordinator") return <DistrictDashboard />
   if (role === "branch_coordinator") return <BranchDashboard />
-  if (role === "chief_trainer") return <BranchDashboard />
-  if (role === "mission_field_coordinator") return <BranchDashboard />
+  if (role === "chief_trainer") return <BranchDashboard focus="training" />
+  if (role === "mission_field_coordinator") return <BranchDashboard focus="outreach" />
   if (role === "flight_shepherd") return <ShepherdDashboard />
   return <ViewerDashboard />
 }

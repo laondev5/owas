@@ -2,7 +2,7 @@ import { connectDB } from "@/lib/db"
 import { Soul } from "@/lib/models/Soul"
 import { User } from "@/lib/models/User"
 import { Notification } from "@/lib/models/Notification"
-import { withAuth, ok, err } from "@/lib/api-helpers"
+import { withAuth, ok, err, getAppUrl } from "@/lib/api-helpers"
 import { triggerUserNotification } from "@/lib/pusher"
 import { sendMail, convertAssignedHtml } from "@/lib/mailer"
 import mongoose from "mongoose"
@@ -66,7 +66,7 @@ export async function PATCH(req: Request, ctx: { params: { id: string } }) {
 
     if (isReassignment) {
       const convertName = soul.fullName
-      const loginUrl = `${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/souls`
+      const loginUrl = `${getAppUrl()}/souls`
 
       User.findById(newShepherdId).select("name email").lean().then((shepherd) => {
         const notifTitle = "Convert Assigned to You"

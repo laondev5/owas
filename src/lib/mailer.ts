@@ -212,6 +212,37 @@ export function welcomeUserHtml(params: {
   `
 }
 
+export function commentHtml(params: {
+  recipientName: string
+  authorName: string
+  text: string
+  loginUrl: string
+}): string {
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;">
+      <div style="background:#1B4F72;padding:24px;border-radius:8px 8px 0 0;">
+        <h1 style="color:#fff;margin:0;font-size:20px;">HARPAZO-OWAS</h1>
+        <p style="color:#93C6E0;margin:4px 0 0;font-size:13px;">New Feedback From Your Supervisor</p>
+      </div>
+      <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 8px 8px;">
+        <p style="color:#374151;font-size:14px;line-height:1.6;">Hi <strong>${params.recipientName}</strong>,</p>
+        <p style="color:#374151;font-size:14px;line-height:1.6;">
+          <strong>${params.authorName}</strong> left a comment on your activity:
+        </p>
+        <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:20px;margin:20px 0;">
+          <p style="color:#111827;font-size:14px;line-height:1.6;margin:0;">${params.text}</p>
+        </div>
+        <div style="text-align:center;margin:24px 0;">
+          <a href="${params.loginUrl}"
+             style="background:#1B4F72;color:#fff;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block;">
+            View in HARPAZO-OWAS
+          </a>
+        </div>
+      </div>
+    </div>
+  `
+}
+
 export function smlCertifiedHtml(params: {
   coordinatorName: string
   smlName: string

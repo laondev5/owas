@@ -9,6 +9,7 @@ export const NOTIFICATION_TYPES = [
   "kpi_published",
   "escalation",
   "digest",
+  "supervisor_comment",
 ] as const
 
 export const NOTIFICATION_CHANNELS = ["email", "whatsapp", "in_app"] as const

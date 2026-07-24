@@ -9,7 +9,6 @@ export const LoginSchema = z.object({
 export const CreateUserSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
   role: z.enum(USER_ROLES),
   organizationId: z.string().length(24, "Invalid organization ID"),
   organizationLevel: z.enum(ORG_LEVELS),
