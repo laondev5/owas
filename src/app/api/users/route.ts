@@ -119,7 +119,7 @@ export const POST = withAuth(async (req, { session }) => {
   try {
     await sendMail({
       to: user.email,
-      subject: "Welcome to HARPAZO-OWAS — Your Login Details",
+      subject: `You've been added to HARPAZO-OWAS`,
       html: welcomeUserHtml({
         name: user.name,
         email: user.email,

@@ -22,17 +22,34 @@ interface SendMailOptions {
   subject: string
   html: string
   text?: string
+  replyTo?: string
 }
 
-export async function sendMail({ to, subject, html, text }: SendMailOptions) {
+export async function sendMail({ to, subject, html, text, replyTo }: SendMailOptions) {
   const transporter = getTransporter()
   await transporter.sendMail({
     from: process.env.EMAIL_FROM ?? '"HARPAZO-OWAS" <noreply@lff.org>',
+    replyTo: replyTo ?? process.env.EMAIL_USER,
     to: Array.isArray(to) ? to.join(", ") : to,
     subject,
     html,
     text: text ?? html.replace(/<[^>]+>/g, ""),
   })
+}
+
+// Shared footer — a consistent sender identity/signature across every template
+// helps mail providers treat these as legitimate recurring correspondence
+// rather than a one-off templated blast (a common spam-classifier signal).
+function emailFooter(): string {
+  return `
+    <div style="margin-top:28px;padding-top:16px;border-top:1px solid #F3F4F6;">
+      <p style="color:#9CA3AF;font-size:11px;line-height:1.6;margin:0;">
+        Living Faith Foundation — HARPAZO-OWAS Operation Win A Soul Platform<br/>
+        This is an automated message from your church's internal reporting system. If something
+        looks wrong, contact your Branch Coordinator or Super Admin directly rather than replying to this address.
+      </p>
+    </div>
+  `
 }
 
 // --- Email Templates ---
@@ -65,6 +82,7 @@ export function reportReminderHtml(params: {
         <p style="color:#6B7280;font-size:12px;">
           Late submissions affect your branch's KPI compliance score.
         </p>
+        ${emailFooter()}
       </div>
     </div>
   `
@@ -97,6 +115,7 @@ export function convertInactiveHtml(params: {
             View Convert Record
           </a>
         </div>
+        ${emailFooter()}
       </div>
     </div>
   `
@@ -156,6 +175,7 @@ export function convertAssignedHtml(params: {
         <p style="color:#9CA3AF;font-size:12px;border-top:1px solid #F3F4F6;padding-top:16px;margin-top:8px;">
           Regular follow-up is key to helping this soul integrate into the church. Log every contact in the system.
         </p>
+        ${emailFooter()}
       </div>
     </div>
   `
@@ -175,38 +195,24 @@ export function welcomeUserHtml(params: {
         <p style="color:#93C6E0;margin:4px 0 0;font-size:13px;">Living Faith Foundation — Operation Win A Soul</p>
       </div>
       <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 8px 8px;">
-        <h2 style="color:#111827;font-size:18px;margin:0 0 8px;">Welcome to HARPAZO-OWAS, ${params.name}!</h2>
+        <h2 style="color:#111827;font-size:18px;margin:0 0 8px;">Hi ${params.name},</h2>
         <p style="color:#374151;font-size:14px;line-height:1.6;">
-          An account has been created for you on the HARPAZO-OWAS platform. Below are your login credentials:
+          Your coordinator has added you to the HARPAZO-OWAS platform as a <strong>${params.role}</strong>,
+          using this email address (${params.email}).
         </p>
-        <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:20px;margin:20px 0;">
-          <table style="width:100%;border-collapse:collapse;">
-            <tr>
-              <td style="color:#6B7280;font-size:13px;padding:6px 0;width:100px;">Role</td>
-              <td style="color:#111827;font-size:13px;font-weight:600;padding:6px 0;">${params.role}</td>
-            </tr>
-            <tr>
-              <td style="color:#6B7280;font-size:13px;padding:6px 0;">Email</td>
-              <td style="color:#111827;font-size:13px;font-weight:600;padding:6px 0;">${params.email}</td>
-            </tr>
-            <tr>
-              <td style="color:#6B7280;font-size:13px;padding:6px 0;">Password</td>
-              <td style="color:#111827;font-size:13px;font-weight:600;padding:6px 0;font-family:monospace;">${params.password}</td>
-            </tr>
-          </table>
-        </div>
         <p style="color:#374151;font-size:14px;line-height:1.6;">
-          Please log in and change your password as soon as possible.
+          You can sign in at <a href="${params.loginUrl}" style="color:#1B4F72;">${params.loginUrl}</a> using
+          the temporary passphrase below. You'll be able to change it to something memorable once you're in.
         </p>
-        <div style="text-align:center;margin:24px 0;">
-          <a href="${params.loginUrl}"
-             style="background:#1B4F72;color:#fff;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block;">
-            Log In Now
-          </a>
-        </div>
-        <p style="color:#9CA3AF;font-size:12px;border-top:1px solid #F3F4F6;padding-top:16px;margin-top:8px;">
-          If you did not expect this email, please contact your Branch Coordinator or Super Admin immediately.
+        <p style="text-align:center;margin:20px 0;">
+          <span style="display:inline-block;background:#F9FAFB;border:1px dashed #D1D5DB;border-radius:8px;
+             padding:12px 24px;font-family:monospace;font-size:15px;color:#111827;letter-spacing:0.5px;">${params.password}</span>
         </p>
+        <p style="color:#6B7280;font-size:13px;line-height:1.6;">
+          If you weren't expecting an account, or something here doesn't look right, just let your Branch
+          Coordinator or the National OWAS Desk know — no need to click anything below.
+        </p>
+        ${emailFooter()}
       </div>
     </div>
   `
@@ -238,6 +244,7 @@ export function commentHtml(params: {
             View in HARPAZO-OWAS
           </a>
         </div>
+        ${emailFooter()}
       </div>
     </div>
   `
@@ -270,6 +277,7 @@ export function smlCertifiedHtml(params: {
                </div>`
             : ""
         }
+        ${emailFooter()}
       </div>
     </div>
   `
