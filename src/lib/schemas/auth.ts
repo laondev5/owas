@@ -30,6 +30,18 @@ export const ResetPasswordSchema = z
     path: ["confirmPassword"],
   })
 
+export const SetupAccountSchema = z
+  .object({
+    token: z.string().min(1, "Missing setup token"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  })
+
 export type LoginInput = z.infer<typeof LoginSchema>
 export type CreateUserInput = z.infer<typeof CreateUserSchema>
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>
+export type SetupAccountInput = z.infer<typeof SetupAccountSchema>

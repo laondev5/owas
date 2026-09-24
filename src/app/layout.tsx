@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   title: "HARPAZO-OWAS | Living Faith Foundation",
   description: "National Operation Win A Soul Reporting & Management Platform",
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: "/HARPAZO_LOGO.png",
+    apple: "/HARPAZO_LOGO.png",
   },
 }
 

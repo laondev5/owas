@@ -184,9 +184,8 @@ export function convertAssignedHtml(params: {
 export function welcomeUserHtml(params: {
   name: string
   email: string
-  password: string
   role: string
-  loginUrl: string
+  setupUrl: string
 }): string {
   return `
     <div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;">
@@ -201,16 +200,19 @@ export function welcomeUserHtml(params: {
           using this email address (${params.email}).
         </p>
         <p style="color:#374151;font-size:14px;line-height:1.6;">
-          You can sign in at <a href="${params.loginUrl}" style="color:#1B4F72;">${params.loginUrl}</a> using
-          the temporary passphrase below. You'll be able to change it to something memorable once you're in.
+          Set up your own password to get started:
         </p>
         <p style="text-align:center;margin:20px 0;">
-          <span style="display:inline-block;background:#F9FAFB;border:1px dashed #D1D5DB;border-radius:8px;
-             padding:12px 24px;font-family:monospace;font-size:15px;color:#111827;letter-spacing:0.5px;">${params.password}</span>
+          <a href="${params.setupUrl}"
+             style="display:inline-block;background:#1B4F72;color:#fff;padding:12px 28px;border-radius:8px;
+                text-decoration:none;font-weight:600;font-size:14px;">Set Up Your Account</a>
         </p>
         <p style="color:#6B7280;font-size:13px;line-height:1.6;">
-          If you weren't expecting an account, or something here doesn't look right, just let your Branch
-          Coordinator or the National OWAS Desk know — no need to click anything below.
+          This link works once and expires in 5 days. If it's expired by the time you get to it, just ask
+          your Branch Coordinator or the National OWAS Desk for a new one.
+        </p>
+        <p style="color:#6B7280;font-size:13px;line-height:1.6;">
+          If you weren't expecting an account, you can safely ignore this email.
         </p>
         ${emailFooter()}
       </div>

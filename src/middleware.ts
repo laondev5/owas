@@ -27,6 +27,8 @@ export default auth((req) => {
 
   const isPublicPath =
     pathname.startsWith("/login") ||
+    pathname.startsWith("/setup-account") ||
+    pathname.startsWith("/api/setup-account") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/pusher/auth") ||
     pathname.startsWith("/join") ||
@@ -86,5 +88,5 @@ export default auth((req) => {
 })
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|public).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|public|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp)$).*)"],
 }

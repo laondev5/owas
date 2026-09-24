@@ -11,30 +11,19 @@ import bcrypt from "bcryptjs"
 import crypto from "crypto"
 import mongoose from "mongoose"
 
-// Word-based passphrase instead of a raw random token. A base64url blob like
-// "xK9_QaZ3mWe" reads exactly like an API key / reset token, which is a strong
-// spam/phishing signal to mail filters when it sits next to "password"/"login".
-// A capitalized-word passphrase reads like something a person typed instead.
-const PASSPHRASE_WORDS = [
-  "grace", "faith", "mercy", "hope", "light", "harvest", "shepherd", "vision",
-  "spirit", "glory", "anchor", "beacon", "steady", "truth", "wisdom", "courage",
-  "gentle", "mighty", "precious", "radiant", "serene", "triumph", "victory",
-  "zealous", "bright", "kindle", "noble", "peaceful", "renew", "faithful",
-  "blessed", "guided", "worthy", "risen", "shining", "humble", "chosen",
-  "eternal", "diligent", "abundant", "constant", "genuine", "sincere", "valiant",
-]
+const SETUP_TOKEN_TTL_MS = 5 * 24 * 60 * 60 * 1000 // 5 days
 
-function generatePassword(): string {
-  const usedIndexes = new Set<number>()
-  const pickWord = () => {
-    let i = crypto.randomInt(0, PASSPHRASE_WORDS.length)
-    while (usedIndexes.has(i)) i = crypto.randomInt(0, PASSPHRASE_WORDS.length)
-    usedIndexes.add(i)
-    const w = PASSPHRASE_WORDS[i]
-    return w.charAt(0).toUpperCase() + w.slice(1)
-  }
-  const number = crypto.randomInt(100, 999)
-  return `${pickWord()}${pickWord()}${pickWord()}${number}`
+function hashToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex")
+}
+
+// New accounts never get an emailed password (a live credential in an email is
+// one of the strongest phishing/spam signals mail filters key on — see the
+// reg-form vs lff-owas comparison that led to this). Instead they get a
+// single-use setup link; the passwordHash below is an unguessable placeholder
+// nobody is ever told, replaced the moment they complete setup.
+async function randomPlaceholderHash(): Promise<string> {
+  return bcrypt.hash(crypto.randomBytes(32).toString("hex"), 12)
 }
 
 // GET /api/users — list users (branch_coordinator+ can list their org's users)
@@ -114,12 +103,14 @@ export const POST = withAuth(async (req, { session }) => {
   const existing = await User.findOne({ email: data.email.toLowerCase() })
   if (existing) return err("Email already in use")
 
-  const password = generatePassword()
-  const passwordHash = await bcrypt.hash(password, 12)
+  const setupToken = crypto.randomBytes(32).toString("hex")
+  const passwordHash = await randomPlaceholderHash()
 
   const user = await User.create({
     ...data,
     passwordHash,
+    resetToken: hashToken(setupToken),
+    resetTokenExpiry: new Date(Date.now() + SETUP_TOKEN_TTL_MS),
     organizationId: new mongoose.Types.ObjectId(data.organizationId),
   })
 
@@ -134,9 +125,10 @@ export const POST = withAuth(async (req, { session }) => {
     role: user.role,
   })
 
-  // Send welcome email with credentials — awaited so a delivery failure is
-  // reported back to the admin instead of silently disappearing into a log.
-  const loginUrl = `${getAppUrl()}/login`
+  // Email a one-time setup link (expires in 5 days) instead of a password —
+  // awaited so a delivery failure is reported back to the admin instead of
+  // silently disappearing into a log.
+  const setupUrl = `${getAppUrl()}/setup-account?token=${setupToken}`
   let emailSent = true
   try {
     await sendMail({
@@ -145,9 +137,8 @@ export const POST = withAuth(async (req, { session }) => {
       html: welcomeUserHtml({
         name: user.name,
         email: user.email,
-        password,
         role: ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] ?? user.role,
-        loginUrl,
+        setupUrl,
       }),
     })
   } catch (e) {
@@ -155,5 +146,8 @@ export const POST = withAuth(async (req, { session }) => {
     console.error("[welcome email]", e)
   }
 
-  return ok({ id: user._id, name: user.name, email: user.email, role: user.role, emailSent }, 201)
+  return ok(
+    { id: user._id, name: user.name, email: user.email, role: user.role, emailSent, setupUrl: emailSent ? undefined : setupUrl },
+    201
+  )
 }, "branch_coordinator")

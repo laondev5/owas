@@ -112,7 +112,7 @@ export function Sidebar({ className, onClose }: { className?: string; onClose?: 
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0 bg-white flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="LFF Logo" width={36} height={36} className="object-contain" />
+              <img src="/HARPAZO_LOGO.png" alt="HARPAZO Logo" width={36} height={36} className="object-contain" />
             </div>
             <div>
               <p className="font-bold text-sm leading-tight">HARPAZO</p>

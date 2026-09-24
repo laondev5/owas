@@ -88,7 +88,7 @@ export default function JoinForm() {
         <div className="text-center mb-8 space-y-3">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white/10 backdrop-blur mb-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="LFF" width={56} height={56} className="object-contain" />
+            <img src="/HARPAZO_LOGO.png" alt="HARPAZO" width={56} height={56} className="object-contain" />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-white">Welcome!</h1>

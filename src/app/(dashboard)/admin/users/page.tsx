@@ -129,11 +129,24 @@ function CreateUserModal({ orgs, onClose }: { orgs: OrgDoc[]; onClose: () => voi
       if (!res.ok) throw new Error(json.error ?? "Failed to create user")
       return json.data
     },
-    onSuccess: (data: { emailSent: boolean }) => {
+    onSuccess: (data: { emailSent: boolean; setupUrl?: string }) => {
       if (data.emailSent) {
-        toast.success("User created — a welcome email with their login password was sent")
+        toast.success("User created — a setup link was emailed to them (expires in 5 days)")
+      } else if (data.setupUrl) {
+        const setupUrl = data.setupUrl
+        toast.warning("User created, but the setup email failed to send", {
+          description: "Copy the setup link below and share it with them directly.",
+          duration: 20000,
+          action: {
+            label: "Copy Link",
+            onClick: () => {
+              navigator.clipboard.writeText(setupUrl)
+              toast.success("Setup link copied")
+            },
+          },
+        })
       } else {
-        toast.warning("User created, but the welcome email failed to send — check email server config or reset their password manually")
+        toast.warning("User created, but the setup email failed to send")
       }
       qc.invalidateQueries({ queryKey: ["users"] })
       qc.invalidateQueries({ queryKey: ["organizations"] })
@@ -150,7 +163,7 @@ function CreateUserModal({ orgs, onClose }: { orgs: OrgDoc[]; onClose: () => voi
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Create User</h2>
-            <p className="text-xs text-gray-400 mt-0.5">A login password is generated automatically and emailed to them</p>
+            <p className="text-xs text-gray-400 mt-0.5">A one-time setup link is emailed to them to choose their own password (expires in 5 days)</p>
           </div>
           <button onClick={onClose} className="p-1 rounded hover:bg-gray-100"><X className="h-4 w-4 text-gray-500" /></button>
         </div>
